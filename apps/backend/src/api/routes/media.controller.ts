@@ -18,6 +18,7 @@ import { Organization } from '@prisma/client';
 import { MediaService } from '@gitroom/nestjs-libraries/database/prisma/media/media.service';
 import { ApiTags } from '@nestjs/swagger';
 import handleR2Upload from '@gitroom/nestjs-libraries/upload/r2.uploader';
+import handleS3Upload from '@gitroom/nestjs-libraries/upload/s3.uploader';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { CustomFileValidationPipe } from '@gitroom/nestjs-libraries/upload/custom.upload.validation';
 import { SubscriptionService } from '@gitroom/nestjs-libraries/database/prisma/subscriptions/subscription.service';
@@ -108,10 +109,24 @@ export class MediaController {
     if (!name) {
       return false;
     }
+    const storageProvider = process.env.STORAGE_PROVIDER || 'local';
+    let bucketUrl = '';
+    
+    switch (storageProvider) {
+      case 'cloudflare':
+        bucketUrl = process.env.CLOUDFLARE_BUCKET_URL!;
+        break;
+      case 's3':
+        bucketUrl = process.env.AWS_S3_BUCKET_URL!;
+        break;
+      default:
+        bucketUrl = process.env.FRONTEND_URL + '/uploads';
+    }
+    
     return this._mediaService.saveFile(
       org.id,
       name,
-      process.env.CLOUDFLARE_BUCKET_URL + '/' + name
+      bucketUrl + '/' + name
     );
   }
 
@@ -151,7 +166,16 @@ export class MediaController {
     @Res() res: Response,
     @Param('endpoint') endpoint: string
   ) {
-    const upload = await handleR2Upload(endpoint, req, res);
+    const storageProvider = process.env.STORAGE_PROVIDER || 'local';
+    let upload;
+    
+    if (storageProvider === 's3') {
+      upload = await handleS3Upload(endpoint, req, res);
+    } else {
+      // Default to R2 for cloudflare, or handle other providers
+      upload = await handleR2Upload(endpoint, req, res);
+    }
+    
     if (endpoint !== 'complete-multipart-upload') {
       return upload;
     }
