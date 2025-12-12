@@ -41,6 +41,7 @@ export function Register() {
   const fetch = useFetch();
   const [provider] = useState(getQuery?.get('provider')?.toUpperCase());
   const [code, setCode] = useState(getQuery?.get('code') || '');
+  const [returnUrl, setReturnUrl] = useState(getQuery?.get('returnUrl') || null);
   const [show, setShow] = useState(false);
   useEffect(() => {
     if (provider && code) {
@@ -62,13 +63,13 @@ export function Register() {
     }
   }, [provider, code]);
   if (!code && !provider) {
-    return <RegisterAfter token="" provider="LOCAL" />;
+    return <RegisterAfter token="" provider="LOCAL" returnUrl={returnUrl} />;
   }
   if (!show) {
     return <LoadingComponent />;
   }
   return (
-    <RegisterAfter token={code} provider={provider?.toUpperCase() || 'LOCAL'} />
+    <RegisterAfter token={code} provider={provider?.toUpperCase() || 'LOCAL'} returnUrl={returnUrl} />
   );
 }
 function getHelpfulReasonForRegistrationFailure(httpCode: number) {
@@ -83,9 +84,11 @@ function getHelpfulReasonForRegistrationFailure(httpCode: number) {
 export function RegisterAfter({
   token,
   provider,
+  returnUrl,
 }: {
   token: string;
   provider: string;
+  returnUrl?: string | null;
 }) {
   const t = useT();
   const { isGeneral, genericOauth, neynarClientId, billingEnabled } =
@@ -124,7 +127,13 @@ export function RegisterAfter({
             if (response.headers.get('activate') === 'true') {
               router.push('/auth/activate');
             } else {
-              router.push('/auth/login');
+              // Redirect to returnUrl if provided, otherwise to login
+              // This enables deep linking from external OAuth provider platforms
+              if (returnUrl && returnUrl.startsWith('http')) {
+                window.location.href = returnUrl;
+              } else {
+                router.push('/auth/login');
+              }
             }
           });
         } else {

@@ -203,6 +203,63 @@ export class AuthController {
     return this._authService.oauthLink(provider, query);
   }
 
+  @Get('/oauth/:provider/initiate')
+  async oauthInitiate(
+    @Param('provider') provider: string,
+    @Query() query: any,
+    @Res({ passthrough: false }) response: Response
+  ) {
+    /**
+     * Endpoint for initiating OAuth flow from external platforms
+     * 
+     * This endpoint allows OAuth providers (e.g., NextChat) to redirect users
+     * directly to the application and automatically start the OAuth login flow.
+     * 
+     * Query parameters:
+     * - returnUrl (optional): URL to redirect to after successful authentication
+     * - redirect_uri (optional): Custom redirect URI for OAuth callback
+     * 
+     * Example usage:
+     * https://your-app.com/auth/oauth/GENERIC/initiate?returnUrl=https://platform.com/success
+     * 
+     * Following OAuth 2.0 best practices and open-source requirements:
+     * - No sensitive data in URL parameters
+     * - State parameter for CSRF protection
+     * - Proper error handling
+     */
+    try {
+      // Build query object with optional parameters
+      const oauthQuery: any = {};
+      
+      // If returnUrl is provided, encode it in the state parameter
+      if (query.returnUrl) {
+        oauthQuery.state = JSON.stringify({ returnUrl: query.returnUrl });
+      }
+      
+      // Allow custom redirect_uri for deep linking scenarios
+      if (query.redirect_uri) {
+        oauthQuery.redirect_uri = query.redirect_uri;
+      }
+      
+      const authUrlResult = this._authService.oauthLink(provider, oauthQuery);
+      
+      // Redirect directly to OAuth provider's authorization page
+      // Handle both sync (string) and async (Promise<string>) cases
+      const authUrl = typeof authUrlResult === 'string' 
+        ? authUrlResult 
+        : await authUrlResult;
+      response.redirect(authUrl);
+    } catch (error: any) {
+      // Error handling - redirect to login page with error message
+      const errorMessage = encodeURIComponent(
+        error.message || 'Failed to initiate OAuth flow'
+      );
+      response.redirect(
+        `${process.env.FRONTEND_URL}/auth/login?error=${errorMessage}`
+      );
+    }
+  }
+
   @Post('/activate')
   async activate(
     @Body('code') code: string,

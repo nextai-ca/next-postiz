@@ -1,4 +1,5 @@
 import { ProvidersInterface } from '@gitroom/backend/services/auth/providers.interface';
+import { makeId } from '@gitroom/nestjs-libraries/services/make.is';
 
 export class OauthProvider implements ProvidersInterface {
   private readonly authUrl: string;
@@ -8,6 +9,7 @@ export class OauthProvider implements ProvidersInterface {
   private readonly frontendUrl: string;
   private readonly tokenUrl: string;
   private readonly userInfoUrl: string;
+  private readonly redirectUri: string;
 
   constructor() {
     const {
@@ -46,14 +48,29 @@ export class OauthProvider implements ProvidersInterface {
     this.frontendUrl = FRONTEND_URL;
     this.tokenUrl = POSTIZ_OAUTH_TOKEN_URL;
     this.userInfoUrl = POSTIZ_OAUTH_USERINFO_URL;
+    this.redirectUri = `${this.frontendUrl}/auth/callback`;
   }
 
-  generateLink(): string {
+  generateLink(query?: any): string {
+    // Generate a unique state token
+    const stateToken = makeId(16);
+    
+    // If a custom state is provided in query, encode it along with the state token
+    // Format: {token}:{customState} - this allows us to validate and extract both
+    let state = stateToken;
+    if (query?.state) {
+      state = `${stateToken}:${encodeURIComponent(query.state)}`;
+    }
+    
+    // Support custom redirect_uri if provided (for deep linking scenarios)
+    const redirectUri = query?.redirect_uri || this.redirectUri;
+    
     const params = new URLSearchParams({
       client_id: this.clientId,
-      scope: 'openid profile email',
+      scope: process.env.POSTIZ_OAUTH_SCOPE || 'openid profile email',
       response_type: 'code',
-      redirect_uri: `${this.frontendUrl}/settings`,
+      redirect_uri: redirectUri,
+      state,
     });
 
     return `${this.authUrl}?${params.toString()}`;
@@ -71,7 +88,7 @@ export class OauthProvider implements ProvidersInterface {
         client_id: this.clientId,
         client_secret: this.clientSecret,
         code,
-        redirect_uri: `${this.frontendUrl}/settings`,
+        redirect_uri: this.redirectUri,
       }),
     });
 
