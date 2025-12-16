@@ -1,0 +1,146 @@
+version: '3.8'
+
+services:
+  postiz:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+      args:
+        NEXT_PUBLIC_VERSION: ${NEXT_PUBLIC_VERSION:-latest}
+    image: postiz:latest
+    container_name: postiz
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    environment:
+      # Database
+      DATABASE_URL: ${DATABASE_URL}
+      
+      # Redis
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
+      
+      # Application URLs
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5000}
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL:-http://localhost:5000/api}
+      BACKEND_INTERNAL_URL: ${BACKEND_INTERNAL_URL:-http://localhost:3000}
+      MAIN_URL: ${MAIN_URL:-http://localhost:5000}
+      
+      # Security
+      JWT_SECRET: ${JWT_SECRET}
+      NOT_SECURED: ${NOT_SECURED:-false}
+      
+      # Storage
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:-local}
+      UPLOAD_DIRECTORY: ${UPLOAD_DIRECTORY:-/uploads}
+      
+      # Storage - S3 (if STORAGE_PROVIDER=s3)
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_REGION: ${AWS_REGION:-}
+      AWS_S3_BUCKET_NAME: ${AWS_S3_BUCKET_NAME:-}
+      AWS_S3_BUCKET_URL: ${AWS_S3_BUCKET_URL:-}
+      
+      # Storage - Cloudflare R2 (if STORAGE_PROVIDER=cloudflare)
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CLOUDFLARE_ACCESS_KEY: ${CLOUDFLARE_ACCESS_KEY:-}
+      CLOUDFLARE_SECRET_ACCESS_KEY: ${CLOUDFLARE_SECRET_ACCESS_KEY:-}
+      CLOUDFLARE_REGION: ${CLOUDFLARE_REGION:-}
+      CLOUDFLARE_BUCKETNAME: ${CLOUDFLARE_BUCKETNAME:-}
+      CLOUDFLARE_BUCKET_URL: ${CLOUDFLARE_BUCKET_URL:-}
+      
+      # OAuth
+      POSTIZ_GENERIC_OAUTH: ${POSTIZ_GENERIC_OAUTH:-}
+      POSTIZ_OAUTH_AUTH_URL: ${POSTIZ_OAUTH_AUTH_URL:-}
+      POSTIZ_OAUTH_TOKEN_URL: ${POSTIZ_OAUTH_TOKEN_URL:-}
+      POSTIZ_OAUTH_USERINFO_URL: ${POSTIZ_OAUTH_USERINFO_URL:-}
+      POSTIZ_OAUTH_CLIENT_ID: ${POSTIZ_OAUTH_CLIENT_ID:-}
+      POSTIZ_OAUTH_CLIENT_SECRET: ${POSTIZ_OAUTH_CLIENT_SECRET:-}
+      POSTIZ_OAUTH_SCOPE: ${POSTIZ_OAUTH_SCOPE:-openid profile email}
+      POSTIZ_OAUTH_URL: ${POSTIZ_OAUTH_URL:-}
+      NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL: ${NEXT_PUBLIC_POSTIZ_OAUTH_LOGO_URL:-}
+      NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME: ${NEXT_PUBLIC_POSTIZ_OAUTH_DISPLAY_NAME:-}
+      
+      # GitHub OAuth
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      
+      # Features
+      IS_GENERAL: ${IS_GENERAL:-true}
+      DISABLE_REGISTRATION: ${DISABLE_REGISTRATION:-false}
+      DISALLOW_PLUS: ${DISALLOW_PLUS:-false}
+      
+      # Email
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      
+      # Stripe (optional)
+      STRIPE_PUBLISHABLE_KEY: ${STRIPE_PUBLISHABLE_KEY:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      
+      # Analytics & Monitoring
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      SENTRY_ORG: ${SENTRY_ORG:-}
+      SENTRY_PROJECT: ${SENTRY_PROJECT:-}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN:-}
+      
+      # Other optional features
+      NEXT_PUBLIC_POLOTNO: ${NEXT_PUBLIC_POLOTNO:-}
+      NEXT_PUBLIC_DISCORD_SUPPORT: ${NEXT_PUBLIC_DISCORD_SUPPORT:-}
+      NEXT_PUBLIC_TOLT: ${NEXT_PUBLIC_TOLT:-}
+      NEXT_PUBLIC_FACEBOOK_PIXEL: ${NEXT_PUBLIC_FACEBOOK_PIXEL:-}
+      TELEGRAM_BOT_NAME: ${TELEGRAM_BOT_NAME:-}
+      NEYNAR_CLIENT_ID: ${NEYNAR_CLIENT_ID:-}
+      DISABLE_IMAGE_COMPRESSION: ${DISABLE_IMAGE_COMPRESSION:-false}
+      DISABLE_X_ANALYTICS: ${DISABLE_X_ANALYTICS:-false}
+      NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY: ${NEXT_PUBLIC_UPLOAD_STATIC_DIRECTORY:-/uploads}
+      
+      # Transloadit (optional)
+      TRANSLOADIT_AUTH: ${TRANSLOADIT_AUTH:-}
+      TRANSLOADIT_TEMPLATE: ${TRANSLOADIT_TEMPLATE:-}
+      
+      # Node environment
+      NODE_ENV: production
+    volumes:
+      - uploads:/uploads
+    depends_on:
+      - redis
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  redis:
+    image: redis:7-alpine
+    container_name: postiz-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    volumes:
+      - redis-data:/data
+    networks:
+      - postiz-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+volumes:
+  uploads:
+    driver: local
+  redis-data:
+    driver: local
+
+networks:
+  postiz-network:
+    driver: bridge
+
