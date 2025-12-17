@@ -38,6 +38,11 @@ export const ContinueIntegration: FC<{
         });
       }
 
+      // For nextchat-blog, pass botConfigId if present
+      if (provider === 'nextchat-blog' && searchParams.botConfigId) {
+        modifiedParams.botConfigId = searchParams.botConfigId;
+      }
+
       const data = await fetch(`/integrations/social/${provider}/connect`, {
         method: 'POST',
         body: JSON.stringify({ ...modifiedParams, timezone }),

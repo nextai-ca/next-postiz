@@ -11,6 +11,7 @@ export interface IAuthenticator {
       code: string;
       codeVerifier: string;
       refresh?: string;
+      botConfigId?: string; // Optional: for providers that need additional selection (e.g., nextchat-blog)
     },
     clientInformation?: ClientInformation
   ): Promise<AuthTokenDetails | string>;

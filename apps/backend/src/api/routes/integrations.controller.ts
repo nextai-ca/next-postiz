@@ -409,26 +409,27 @@ export class IntegrationsController {
       await ioRedis.del(`refresh:${body.state}`);
     }
 
-    const {
-      error,
-      accessToken,
-      expiresIn,
-      refreshToken,
-      id,
-      name,
-      picture,
-      username,
-      additionalSettings,
-      // eslint-disable-next-line no-async-promise-executor
-    } = await new Promise<AuthTokenDetails>(async (res) => {
-      const auth = await integrationProvider.authenticate(
-        {
-          code: body.code,
-          codeVerifier: getCodeVerifier,
-          refresh: body.refresh,
-        },
-        details ? JSON.parse(details) : undefined
-      );
+      const {
+        error,
+        accessToken,
+        expiresIn,
+        refreshToken,
+        id,
+        name,
+        picture,
+        username,
+        additionalSettings,
+        // eslint-disable-next-line no-async-promise-executor
+      } = await new Promise<AuthTokenDetails>(async (res) => {
+        const auth = await integrationProvider.authenticate(
+          {
+            code: body.code,
+            codeVerifier: getCodeVerifier,
+            refresh: body.refresh,
+            ...(body.botConfigId ? { botConfigId: body.botConfigId } : {}),
+          },
+          details ? JSON.parse(details) : undefined
+        );
 
       if (typeof auth === 'string') {
         return res({
