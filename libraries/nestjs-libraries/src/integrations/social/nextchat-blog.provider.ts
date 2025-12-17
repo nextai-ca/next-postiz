@@ -258,7 +258,7 @@ export class NextChatBlogProvider extends SocialAbstract implements SocialProvid
         id: selectedBot.botConfigId,
         name: selectedBot.name || 'NextChat Blog',
         access_token: accessToken, // Keep the same access token
-        picture: '', // No picture available from API
+        picture: '', // Frontend will use /icons/platforms/nextchat-blog.png as fallback
         username: selectedBot.websiteUrl || selectedBot.botConfigId,
       };
     } catch (err) {
@@ -360,12 +360,15 @@ export class NextChatBlogProvider extends SocialAbstract implements SocialProvid
       title: settings.title,
       content: firstPost.message,
       status: settings.status || 'published',
+      visible: true,
+      tagIds: []
     };
 
-    // Add optional fields
+    // Handle tags: if no tags, send empty array; if has tags, send tag names directly
+    // tagIds now contains tag names (changed in frontend)
     if (settings.tagIds && settings.tagIds.length > 0) {
       requestBody.tagIds = settings.tagIds;
-    }
+    } 
 
     if (settings.metaDescription) {
       requestBody.metaDescription = settings.metaDescription;

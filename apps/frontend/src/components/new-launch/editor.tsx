@@ -59,6 +59,10 @@ import { suggestion } from '@gitroom/frontend/components/new-launch/mention.comp
 import { useFetch } from '@gitroom/helpers/utils/custom.fetch';
 import { AComponent } from '@gitroom/frontend/components/new-launch/a.component';
 import { capitalize } from 'lodash';
+import { ImageExtension } from '@gitroom/frontend/components/new-launch/extensions/image.extension';
+import { YouTubeExtension } from '@gitroom/frontend/components/new-launch/extensions/youtube.extension';
+import { ImageInsertComponent } from '@gitroom/frontend/components/new-launch/image.insert.component';
+import { YouTubeInsertComponent } from '@gitroom/frontend/components/new-launch/youtube.insert.component';
 
 const InterceptBoldShortcut = Extension.create({
   name: 'preventBoldWithUnderline',
@@ -556,6 +560,12 @@ export const Editor: FC<{
                   editor={editorRef?.current?.editor}
                   currentValue={props.value!}
                 />
+                {identifier === 'nextchat-blog' && (
+                  <>
+                    <ImageInsertComponent editor={editorRef?.current?.editor} />
+                    <YouTubeInsertComponent editor={editorRef?.current?.editor} />
+                  </>
+                )}
               </>
             )}
           <div
@@ -718,6 +728,8 @@ export const OnlyEditor = forwardRef<
     }))
   );
 
+  const isNextChatBlog = internal?.integration?.identifier === 'nextchat-blog';
+
   const loadList = useCallback(
     async (query: string) => {
       if (query.length < 2) {
@@ -863,6 +875,9 @@ export const OnlyEditor = forwardRef<
               levels: [1, 2, 3],
             }),
           ]
+        : []),
+      ...(isNextChatBlog && (editorType === 'html' || editorType === 'markdown')
+        ? [ImageExtension, YouTubeExtension]
         : []),
       History.configure({
         depth: 100, // default is 100

@@ -162,7 +162,50 @@ export const ManageModal: FC<AddEditModalProps> = (props) => {
 
         for (const item of checkAllValid) {
           if (item.valid === false) {
-            toaster.show('Some fields are not valid', 'warning');
+            // Log validation errors for debugging
+            console.error('Validation failed for:', item.integration?.identifier || item.integration?.name);
+            console.error('Form errors:', item.err);
+            console.error('Custom validation errors:', item.errors);
+            
+            // Build detailed error message
+            const errorMessages: string[] = [];
+            
+            // Add form field errors (handle nested structure like settings.title)
+            if (item.err && typeof item.err === 'object') {
+              const extractErrors = (errors: any, prefix = ''): string[] => {
+                const result: string[] = [];
+                for (const [key, value] of Object.entries(errors)) {
+                  const fieldName = prefix ? `${prefix}.${key}` : key;
+                  if (value && typeof value === 'object') {
+                    if ('message' in value) {
+                      result.push(`${fieldName}: ${(value as any).message}`);
+                    } else {
+                      // Nested object, recurse
+                      result.push(...extractErrors(value, fieldName));
+                    }
+                  } else if (value) {
+                    result.push(`${fieldName}: ${value}`);
+                  }
+                }
+                return result;
+              };
+              
+              const fieldErrors = extractErrors(item.err);
+              if (fieldErrors.length > 0) {
+                errorMessages.push(...fieldErrors);
+              }
+            }
+            
+            // Add custom validation errors
+            if (item.errors && item.errors !== true && typeof item.errors === 'string') {
+              errorMessages.push(item.errors);
+            }
+            
+            const errorMessage = errorMessages.length > 0
+              ? `Some fields are not valid: ${errorMessages.join(', ')}`
+              : 'Some fields are not valid';
+            
+            toaster.show(errorMessage, 'warning');
             item.fix();
             setLoading(false);
             return;

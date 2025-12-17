@@ -122,12 +122,14 @@ export async function prepareUploadParts(req: Request, res: Response) {
         UploadId: partData.uploadId,
       };
       const command = new UploadPartCommand({ ...params });
+      // Generate presigned URL with 1 hour expiration
+      // Note: CORS must be properly configured on the S3 bucket
       const url = await getSignedUrl(S3, command, { expiresIn: 3600 });
 
       // @ts-ignore
       response.presignedUrls[part.number] = url;
     } catch (err) {
-      console.log('Error', err);
+      console.log('Error preparing upload parts:', err);
       return res.status(500).json(err);
     }
   }
@@ -206,19 +208,28 @@ export async function signPart(req: Request, res: Response) {
   const { key, uploadId } = req.body;
   const partNumber = parseInt(req.body.partNumber);
 
-  const params = {
-    Bucket: AWS_S3_BUCKET_NAME,
-    Key: key,
-    PartNumber: partNumber,
-    UploadId: uploadId,
-    Expires: 3600,
-  };
+  try {
+    const params = {
+      Bucket: AWS_S3_BUCKET_NAME,
+      Key: key,
+      PartNumber: partNumber,
+      UploadId: uploadId,
+      // Note: Expires is not a valid parameter for UploadPartCommand
+      // Expiration is set in getSignedUrl options
+    };
 
-  const command = new UploadPartCommand({ ...params });
-  const url = await getSignedUrl(S3, command, { expiresIn: 3600 });
+    const command = new UploadPartCommand({ ...params });
+    // Generate presigned URL with 1 hour expiration
+    // Note: CORS must be properly configured on the S3 bucket
+    // See S3_CORS_CONFIG.md for required CORS settings
+    const url = await getSignedUrl(S3, command, { expiresIn: 3600 });
 
-  return res.status(200).json({
-    url: url,
-  });
+    return res.status(200).json({
+      url: url,
+    });
+  } catch (err) {
+    console.log('Error signing part:', err);
+    return res.status(500).json({ error: 'Failed to sign part' });
+  }
 }
 
