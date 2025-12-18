@@ -876,9 +876,9 @@ export const OnlyEditor = forwardRef<
             }),
           ]
         : []),
-      ...(isNextChatBlog && (editorType === 'html' || editorType === 'markdown')
-        ? [ImageExtension, YouTubeExtension]
-        : []),
+      // ...(isNextChatBlog && (editorType === 'html' || editorType === 'markdown')
+      //   ? [ImageExtension, YouTubeExtension]
+      //   : []),
       History.configure({
         depth: 100, // default is 100
         newGroupDelay: 100, // default is 500ms

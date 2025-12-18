@@ -36,53 +36,8 @@ export class AuthService {
     addToOrg?: boolean | { orgId: string; role: 'USER' | 'ADMIN'; id: string }
   ) {
     if (provider === Provider.LOCAL) {
-      if (process.env.DISALLOW_PLUS && body.email.includes('+')) {
-        throw new Error('Email with plus sign is not allowed');
-      }
-      const user = await this._userService.getUserByEmail(body.email);
-      if (body instanceof CreateOrgUserDto) {
-        if (user) {
-          throw new Error('Email already exists');
-        }
-
-        if (!(await this.canRegister(provider))) {
-          throw new Error('Registration is disabled');
-        }
-
-        const create = await this._organizationService.createOrgAndUser(
-          body,
-          ip,
-          userAgent
-        );
-
-        const addedOrg =
-          addToOrg && typeof addToOrg !== 'boolean'
-            ? await this._organizationService.addUserToOrg(
-                create.users[0].user.id,
-                addToOrg.id,
-                addToOrg.orgId,
-                addToOrg.role
-              )
-            : false;
-
-        const obj = { addedOrg, jwt: await this.jwt(create.users[0].user) };
-        await this._emailService.sendEmail(
-          body.email,
-          'Activate your account',
-          `Click <a href="${process.env.FRONTEND_URL}/auth/activate/${obj.jwt}">here</a> to activate your account`
-        );
-        return obj;
-      }
-
-      if (!user || !AuthChecker.comparePassword(body.password, user.password)) {
-        throw new Error('Invalid user name or password');
-      }
-
-      if (!user.activated) {
-        throw new Error('User is not activated');
-      }
-
-      return { addedOrg: false, jwt: await this.jwt(user) };
+      // Disable email/password registration and login - only OAuth is allowed
+      throw new Error('Email/password authentication is disabled. Please use OAuth login.');
     }
 
     const user = await this.loginOrRegisterProvider(

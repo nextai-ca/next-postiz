@@ -375,7 +375,10 @@ export class NextChatBlogProvider extends SocialAbstract implements SocialProvid
     }
 
     if (settings.featuredImage) {
-      requestBody.featuredImage = settings.featuredImage;
+      requestBody.coverImage = {
+        src: settings.featuredImage,
+        alt: settings.title,
+      }
     }
 
     if (settings.publishedAt) {
@@ -384,7 +387,10 @@ export class NextChatBlogProvider extends SocialAbstract implements SocialProvid
 
     // Handle featured image from media
     if (settings.main_image?.path) {
-      requestBody.featuredImage = settings.main_image.path;
+      requestBody.coverImage = {
+        src: settings.main_image.path,
+        alt: settings.title,
+      }
     }
 
     try {
